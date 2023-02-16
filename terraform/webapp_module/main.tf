@@ -24,10 +24,16 @@ resource "aws_route_table" "public_rt" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.webapp_igw.id
   }
+  tags = {
+    Name = "public-routetable-${aws_vpc.webapp_vpc.id}"
+  }
 }
 
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.webapp_vpc.id
+  tags = {
+    Name = "private-routetable-${aws_vpc.webapp_vpc.id}"
+  }
 }
 
 resource "aws_subnet" "public_subnet" {
@@ -35,6 +41,9 @@ resource "aws_subnet" "public_subnet" {
   cidr_block        = cidrsubnet(aws_vpc.webapp_vpc.cidr_block, 8, count.index)
   vpc_id            = aws_vpc.webapp_vpc.id
   availability_zone = data.aws_availability_zones.available.names[count.index]
+  tags = {
+    Name = "public-subnet-${count.index+1}"
+  }
 }
 
 resource "aws_subnet" "private_subnet" {
@@ -42,6 +51,9 @@ resource "aws_subnet" "private_subnet" {
   cidr_block        = cidrsubnet(aws_vpc.webapp_vpc.cidr_block, 8, count.index + 3)
   vpc_id            = aws_vpc.webapp_vpc.id
   availability_zone = data.aws_availability_zones.available.names[count.index]
+  tags = {
+    Name = "private-subnet-${count.index+1}"
+  }
 }
 
 locals {
