@@ -9,6 +9,9 @@ resource "aws_vpc" "webapp_vpc" {
 # Create a IG
 resource "aws_internet_gateway" "webapp_igw" {
   vpc_id = aws_vpc.webapp_vpc.id
+  tags = {
+    Name = "internet-gateway-${aws_vpc.webapp_vpc.id}"
+  }
 }
 
 data "aws_availability_zones" "available" {
