@@ -1,4 +1,4 @@
-# CSYE6225-Cloud Computing Assignment 1: aws-infra setup</br>
+# CSYE6225-Cloud Computing Assignment 3 </br>
 
 <h2>AWS Infrastructure Setup using Terraform</h2>
 Prerequisites
@@ -37,7 +37,7 @@ This command should return information about the EC2 instance that Terraform cre
 8. Destroy the infrastructure when it is no longer needed:
 terraform destroy
 
-Useful Links:
-AWS CLI install and configuration: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-Terraform: https://www.terraform.io/
-Guideline to build terraform infrastructure: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-build
+Useful Links: </br>
+AWS CLI install and configuration: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html </br>
+Terraform: https://www.terraform.io/ </br>
+Guideline to build terraform infrastructure: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-build </br>
