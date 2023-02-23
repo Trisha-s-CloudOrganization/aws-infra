@@ -14,7 +14,7 @@ Steps to Setup Infrastructure
 git clone git@github.com:Trisha-s-CloudOrganization/aws-infra.git
 
 2. Navigate to the cloned directory
-cd terraform/env
+cd terraform/environment/dev or cd terraform/environment/demo
 
 3. Format and Initialize Terraform
 terraform fmt && terraform init
@@ -38,6 +38,7 @@ This command should return information about the EC2 instance that Terraform cre
 
 8. Destroy the infrastructure when it is no longer needed:
 terraform destroy
+
 
 Useful Links: </br>
 AWS CLI install and configuration: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html </br>
