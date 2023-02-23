@@ -139,7 +139,7 @@ resource "aws_instance" "webapp_instance" {
   disable_api_termination = false
   # Set the root volume size and type
   root_block_device {
-    volume_size = 20    # Replace with your preferred root volume size (in GB)
+    volume_size = 50    # Replace with your preferred root volume size (in GB)
     volume_type = "gp2" # Replace with your preferred root volume type (e.g. "gp2", "io1", etc.)
   }
   # Allocate a public IPv4 address
