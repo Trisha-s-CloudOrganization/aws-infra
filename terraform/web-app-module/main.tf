@@ -119,12 +119,12 @@ resource "aws_security_group" "ec2-sg" {
   }
 
   # Define outbound rules
-  egress {
-    from_port   = 0 # Allow all outbound traffic
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic to all IP addresses
-  }
+  # egress {
+  # from_port   = 0 # Allow all outbound traffic
+  # to_port     = 0
+  # protocol    = "-1"
+  # cidr_blocks = ["0.0.0.0/0"] # Allow traffic to all IP addresses
+  # }
 
   tags = {
     Name = "ec2-sg-${timestamp()}" # Set the name tag for the security group
@@ -142,9 +142,10 @@ resource "aws_instance" "webapp_instance" {
   root_block_device {
     volume_size = 50    # Replace with your preferred root volume size (in GB)
     volume_type = "gp2" # Replace with your preferred root volume type (e.g. "gp2", "io1", etc.)
+    delete_on_termination = true
   }
   # Allocate a public IPv4 address
-  associate_public_ip_address = true
+  # associate_public_ip_address = true
   tags = {
     Name = "webapp-instance-${timestamp()}" # Set the name tag for the instance
   }
