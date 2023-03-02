@@ -133,7 +133,7 @@ resource "aws_instance" "webapp_instance" {
   ami             = var.my_ami                     # Set the ID of the Amazon Machine Image to use
   instance_type   = "t2.micro"                     # Set the instance type
   key_name        = "ec2"                          # Set the key pair to use for SSH access
-  security_groups = [aws_security_group.ec2-sg.id] # Set the security group to attach to the instance
+  vpc_security_group_ids = [aws_security_group.ec2-sg.id] # Set the security group to attach to the instance
   subnet_id       = local.public_subnet_ids[0]     # Set the ID of the subnet to launch the instance in
   # Enable protection against accidental termination
   disable_api_termination = false
