@@ -26,3 +26,11 @@ variable "my_ami" {
   description = "my ami"
   type        = string
 }
+variable "zone_id" {
+  description = "The ID of the Route53 hosted zone"
+  type = string
+}
+variable "dns_name" {
+  description = "DNS Name for the application"
+  type = string
+}

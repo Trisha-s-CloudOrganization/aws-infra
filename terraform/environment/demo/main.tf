@@ -23,5 +23,6 @@ module "web_app" {
   aws_subnet_count = var.aws_subnet_count
   my_ip            = var.my_ip
   my_ami           = var.my_ami
+  zone_id           = var.zone_id
 }
 

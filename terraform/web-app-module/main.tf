@@ -245,6 +245,7 @@ sudo systemctl enable webservice.service
 sudo systemctl daemon-reload
 sudo systemctl start webservice.service
 sudo systemctl enable webservice.service
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 5080
   EOF
 
   tags = {
@@ -462,3 +463,10 @@ resource "aws_db_instance" "rds_instance" {
 # resource "aws_iam_instance_profile" "ec2_profile" {
 #   role = aws_iam_role.ec2_role.name
 # }
+resource "aws_route53_record" "example" {
+  zone_id = var.zone_id
+  name    = var.dns_name
+  type    = "A"
+  ttl     = "300"
+  records = [aws_instance.webapp_instance.public_ip]
+}
