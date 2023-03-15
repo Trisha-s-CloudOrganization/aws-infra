@@ -63,3 +63,11 @@ variable "db_multiaz" {
   description = "DB multi AZ"
   type        = bool
 }
+variable "zone_id" {
+  description = "The ID of the Route53 hosted zone"
+  type = string
+}
+variable "dns_name" {
+  description = "DNS Name for the application"
+  type = string
+}
