@@ -43,4 +43,10 @@ terraform destroy
 Useful Links: </br>
 AWS CLI install and configuration: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html </br>
 Terraform: https://www.terraform.io/ </br>
-Guideline to build terraform infrastructure: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-build </br>
+Guideline to build terraform infrastructure: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/aws-build </br></br>
+Usefull cmd:</br>
+terraform init</br>
+terraform fmt</br>
+terraform plan</br>
+terraform apply</br>
+terraform destroy</br>
