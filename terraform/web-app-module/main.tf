@@ -234,11 +234,19 @@ echo "spring.jpa.properties.hibernate.show_sql=true" >> application.properties
 echo "spring.jpa.properties.hibernate.use_sql_comments=true" >> application.properties
 echo "spring.jpa.properties.hibernate.format_sql=true" >> application.properties
 echo "logging.level.org.hibernate.type=trace" >> application.properties
+echo "logging.file.path=/home/ec2-user" >> application.properties
+echo "logging.file.name=/home/ec2-user/csye6225.log" >> application.properties
+echo "publish.metrics=true" >> application.properties
+echo "metrics.server.hostname=localhost" >> application.properties
+echo "metrics.server.port=8125" >> application.properties
 echo "#spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.MySQL5InnoDBDialect" >> application.properties
 echo "spring.jpa.hibernate.ddl-auto=update" >> application.properties
 echo "spring.mvc.pathmatch.matching-strategy = ANT_PATH_MATCHER" >> application.properties
 sudo chmod 770 /home/ec2-user/webapp-0.0.1-SNAPSHOT.jar
 sudo cp /tmp/webservice.service /etc/systemd/system
+sudo cp /tmp/cloudwatch-config.json /opt/cloudwatch-config.json
+sudo chmod 770 /opt/cloudwatch-config.json
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/home/ec2-user/cloudwatch-config.json -s
 sudo chmod 770 /etc/systemd/system/webservice.service
 sudo systemctl start webservice.service
 sudo systemctl enable webservice.service
@@ -470,3 +478,52 @@ resource "aws_route53_record" "example" {
   ttl     = "300"
   records = [aws_instance.webapp_instance.public_ip]
 }
+resource "aws_iam_policy_attachment" "web-app-atach-cloudwatch" {
+  name = "attach-cloudwatch-server-policy-ec2"
+  roles = [aws_iam_role.ec2-role.name]
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+# resource "aws_iam_role" "cloudwatch_agent_role" {
+#   name = "cloudwatch-agent-role"
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "ec2.amazonaws.com"
+#         }
+#         Action = "sts:AssumeRole"
+#       }
+#     ]
+#   })
+# }
+
+# resource "aws_iam_policy" "cloudwatch_agent_policy" {
+#   name        = "cloudwatch-agent-policy"
+#   policy      = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Action = [
+#           "cloudwatch:PutMetricData",
+#           "logs:CreateLogGroup",
+#           "logs:CreateLogStream",
+#           "logs:DescribeLogStreams",
+#           "logs:PutLogEvents",
+#           "logs:GetLogEvents",
+#           "logs:FilterLogEvents"
+#         ]
+#         Resource = "*"
+#       }
+#     ]
+#   })
+# }
+
+# resource "aws_iam_role_policy_attachment" "cloudwatch_agent_attachment" {
+#   policy_arn = aws_iam_policy.cloudwatch_agent_policy.arn
+#   role       = aws_iam_role.cloudwatch_agent_role.name
+# }
+
