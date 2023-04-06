@@ -39,6 +39,14 @@ This command should return information about the EC2 instance that Terraform cre
 8. Destroy the infrastructure when it is no longer needed:
 terraform destroy
 
+cmd to execute in Mac M1 processor (before terraform init):
+git clone https://github.com/hashicorp/terraform-provider-template
+cd terraform-provider-template
+go build
+mkdir -p ~/.terraform.d/plugins/registry.terraform.io/hashicorp/template/2.2.0/darwin_arm64
+mv terraform-provider-template ~/.terraform.d/plugins/registry.terraform.io/hashicorp/template/2.2.0/darwin_arm64/terraform-provider-template_v2.2.0_x5
+chmod +x ~/.terraform.d/plugins/registry.terraform.io/hashicorp/template/2.2.0/darwin_arm64/terraform-provider-template_v2.2.0_x5
+
 
 Useful Links: </br>
 AWS CLI install and configuration: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html </br>
