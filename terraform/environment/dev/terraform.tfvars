@@ -1,11 +1,11 @@
 cidr_name         = "10.0.0.0/16"
 vpc_tag_name      = "Dev Vpc"
 aws_profile       = "dev"
-dns_name          = "dev.trishaghorpade16.me"
+domain_name       = "dev.trishaghorpade16.me"
 aws_region        = "us-east-1"
 aws_subnet_count  = 3
-my_ip             = "155.33.135.18/32"
-my_ami            = "ami-01577ae853f199a8a"
+my_ip             = "155.33.133.39/32"
+my_ami            = "ami-0bd8a5cd88d8e62cd"
 db_storage_size   = 20
 db_instance_class = "db.t3.micro"
 db_engine         = "mysql"

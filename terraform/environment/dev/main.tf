@@ -34,6 +34,6 @@ module "web_app" {
   db_public_access  = var.db_public_access
   db_multiaz        = var.db_multiaz
   zone_id           = var.zone_id
-  dns_name          = var.dns_name
+  domain_name       = var.domain_name
 }
 

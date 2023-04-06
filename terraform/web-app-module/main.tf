@@ -97,51 +97,25 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
   }
 
-  ingress {
-    from_port   = 443 # Allow SSH traffic
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
-  }
-
-  ingress {
-    from_port   = 80 # Allow HTTP traffic
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
-  }
+  # ingress {
+  #   from_port   = 80 # Allow HTTP traffic
+  #   to_port     = 80
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
+  # }
   ingress {
     from_port   = 5080 # Allow HTTP traffic
     to_port     = 5080
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
+    # cidr_blocks = [aws_security_group.lb_sg.id] # Allow traffic from all IP addresses
+    security_groups = [aws_security_group.lb_sg.id]
   }
 
 
-  # egress {
-  #   # description = "Allow Postgres traffic fromy the application security group"
-  #   from_port   = 443
-  #   to_port     = 443
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
-  # egress {
-  #   # description = "Allow Postgres traffic fromy the application security group"
-  #   from_port   = 0
-  #   to_port     = 0
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -160,64 +134,40 @@ resource "aws_security_group" "db_sg" {
     to_port         = 3306
     security_groups = [aws_security_group.app_sg.id]
   }
-
-  # egress {
-  #   from_port   = 0
-  #   to_port     = 0
-  #   protocol    = "-1"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
   tags = {
     "Name" = "database-sg-${timestamp()}"
   }
 }
 
-# # Add an inbound rule to the RDS security group to allow traffic from the EC2 security group
-# resource "aws_security_group_rule" "rds_ingress" {
-#   type                     = "ingress"
-#   from_port                = 3306
-#   to_port                  = 3306
-#   protocol                 = "tcp"
-#   security_group_id        = aws_security_group.db_sg.id
-#   source_security_group_id = aws_security_group.app_sg.id
-# }
+resource "aws_security_group" "lb_sg" {
+  name        = "load balancer"
+  description = "Security group for load balancer"
+  vpc_id      = aws_vpc.webapp_vpc.id
 
-# # Add an outbound rule to the RDS security group to allow traffic from the EC2 security group
-# resource "aws_security_group_rule" "rds_egress" {
-#   type                     = "egress"
-#   from_port                = 3306
-#   to_port                  = 3306
-#   protocol                 = "tcp"
-#   security_group_id        = aws_security_group.db_sg.id
-#   source_security_group_id = aws_security_group.app_sg.id
-# }
-
-# Add an inbound rule to the EC2 security group to allow traffic to the RDS security group
-# resource "aws_security_group_rule" "ec2_ingress" {
-#   type                     = "ingress"
-#   from_port                = 3306
-#   to_port                  = 3306
-#   protocol                 = "tcp"
-#   security_group_id        = aws_security_group.app_sg.id
-#   source_security_group_id = aws_security_group.db_sg.id
-# }
-resource "aws_instance" "webapp_instance" {
-  ami                    = var.my_ami                     # Set the ID of the Amazon Machine Image to use
-  instance_type          = "t2.micro"                     # Set the instance type
-  key_name               = "ec2"                          # Set the key pair to use for SSH access
-  vpc_security_group_ids = [aws_security_group.app_sg.id] # Set the security group to attach to the instance
-  subnet_id              = local.public_subnet_ids[0]     # Set the ID of the subnet to launch the instance in
-  # Enable protection against accidental termination
-  disable_api_termination = false
-  # Set the root volume size and type
-  root_block_device {
-    volume_size           = 20    # Replace with your preferred root volume size (in GB)
-    volume_type           = "gp2" # Replace with your preferred root volume type (e.g. "gp2", "io1", etc.)
-    delete_on_termination = true
+  ingress {
+    from_port   = 80 # Allow HTTP traffic
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
   }
-  depends_on           = [aws_db_instance.rds_instance]
-  iam_instance_profile = aws_iam_instance_profile.iam_profile.name
-  user_data            = <<EOF
+  ingress {
+    from_port   = 443 # Allow SSH traffic
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from all IP addresses
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    "Name" = "lb-sg-${timestamp()}"
+  }
+}
+data "template_file" "user_data" {
+  template = <<EOF
 #!/bin/bash
 cd /home/ec2-user || return
 touch application.properties
@@ -255,15 +205,151 @@ sudo systemctl start webservice.service
 sudo systemctl enable webservice.service
 sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 5080
   EOF
+}
 
-  tags = {
-    Name = "webapp-instance-${timestamp()}" # Set the name tag for the instance
+resource "aws_launch_template" "lt" {
+  name                   = "asg_launch_config"
+  image_id               = var.my_ami
+  instance_type          = "t2.micro"
+  key_name               = "ec2"
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  user_data              = base64encode(data.template_file.user_data.rendered)
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 30
+      volume_type           = "gp2"
+      delete_on_termination = true
+    }
+  }
+  # network_interfaces {
+  #   associate_public_ip_address = true
+  #   security_groups             = [aws_security_group.app_sg.id]
+  # }
+  iam_instance_profile {
+    name = aws_iam_instance_profile.iam_profile.name
+  }
+}
+
+resource "aws_autoscaling_group" "asg" {
+  name = "csye6225-asg-spring2023"
+  tag {
+    key                 = "webApp"
+    value               = "web app"
+    propagate_at_launch = true
+  }
+  vpc_zone_identifier = [local.public_subnet_ids[0], local.public_subnet_ids[1]]
+  min_size            = 1
+  max_size            = 3
+  desired_capacity    = 1
+  default_cooldown    = 60
+  launch_template {
+    id      = aws_launch_template.lt.id
+    version = "$Latest"
+  }
+
+  target_group_arns = [
+    aws_lb_target_group.alb_tg.arn
+  ]
+
+}
+
+#Autoscaling policies - Scale up
+resource "aws_autoscaling_policy" "scale_up_policy" {
+  name        = "autoscaling_up_policy"
+  policy_type = "SimpleScaling"
+  scaling_adjustment     = "1"
+  autoscaling_group_name = aws_autoscaling_group.asg.name
+  adjustment_type        = "ChangeInCapacity"
+  cooldown = 60
+}
+
+#Autoscaling policies - Scale down
+resource "aws_autoscaling_policy" "scale_down_policy" {
+  name        = "autoscaling_down_policy"
+  policy_type = "SimpleScaling"
+  scaling_adjustment     = "-1"
+  autoscaling_group_name = aws_autoscaling_group.asg.name
+  adjustment_type        = "ChangeInCapacity"
+  cooldown = 60
+}
+
+#Alarm for Scale up
+resource "aws_cloudwatch_metric_alarm" "alarm_scale_up" {
+  alarm_name                = "alarm_scale_up"
+  comparison_operator       = "GreaterThanOrEqualToThreshold"
+  evaluation_periods        = 2
+  metric_name               = "CPUUtilization"
+  namespace                 = "AWS/EC2"
+  period                    = 120
+  statistic                 = "Average"
+  threshold                 = 5
+  alarm_description         = "This metric monitors ec2 cpu utilization"
+  # insufficient_data_actions = []
+  dimensions = {
+    "AutoScalingGroupName" = aws_autoscaling_group.asg.name
+  }
+  actions_enabled = true
+  alarm_actions = [aws_autoscaling_policy.scale_up_policy.arn]
+}
+
+#Alarm for  scale down
+resource "aws_cloudwatch_metric_alarm" "alarm_scale_down" {
+  alarm_name                = "alarm_scale_down"
+  comparison_operator       = "LessThanOrEqualToThreshold"
+  evaluation_periods        = 2
+  metric_name               = "CPUUtilization"
+  namespace                 = "AWS/EC2"
+  period                    = 120
+  statistic                 = "Average"
+  threshold                 = 3
+  alarm_description         = "This metric monitors ec2 cpu utilization"
+  # insufficient_data_actions = []
+  dimensions = {
+    "AutoScalingGroupName" = aws_autoscaling_group.asg.name
+  }
+  actions_enabled = true
+  alarm_actions = [aws_autoscaling_policy.scale_down_policy.arn]
+}
+
+resource "aws_lb" "lb" {
+name = "csye6225-lb"
+internal = false
+load_balancer_type = "application"
+security_groups    = [aws_security_group.lb_sg.id]
+subnets            = [local.public_subnet_ids[0], local.public_subnet_ids[1],local.public_subnet_ids[2]]
+tags = {
+Application = "WebApp"
+ }
+}
+
+resource "aws_lb_target_group" "alb_tg" {
+  name     = "csye6225-lb-alb-tg"
+  port     = 5080
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.webapp_vpc.id
+  target_type = "instance"
+  health_check {
+    # interval            = 30
+    path                = "/healthz"
+    # port                = "traffic-port"
+    # protocol            = "HTTP"
+    # healthy_threshold   = 5
+    # unhealthy_threshold = 2
+  }
+}
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.lb.arn
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    target_group_arn = aws_lb_target_group.alb_tg.arn
+    type             = "forward"
   }
 }
 
 resource "random_pet" "rg" {
   keepers = {
-    # Generate a new pet name each time we switch to a new profile
     random_name = "webapp"
   }
 }
@@ -303,9 +389,11 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "s3b_encryption" {
 }
 
 resource "aws_s3_bucket_public_access_block" "s3_block" {
-  bucket              = aws_s3_bucket.s3b.id
-  block_public_acls   = true
-  block_public_policy = true
+  bucket                  = aws_s3_bucket.s3b.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 resource "aws_iam_policy" "policy" {
   name        = "WebAppS3"
@@ -315,7 +403,7 @@ resource "aws_iam_policy" "policy" {
     "Version" : "2012-10-17"
     "Statement" : [
       {
-        "Action" : ["s3:DeleteObject", "s3:PutObject", "s3:GetObject", "s3:ListAllMyBuckets"]
+        "Action" : ["s3:DeleteObject", "s3:PutObject", "s3:GetObject", "s3:ListAllMyBuckets", "s3:ListBucket"]
         "Effect" : "Allow"
         "Resource" : ["arn:aws:s3:::${aws_s3_bucket.s3b.bucket}",
         "arn:aws:s3:::${aws_s3_bucket.s3b.bucket}/*"]
@@ -346,82 +434,17 @@ resource "aws_iam_policy_attachment" "web-app-s3-attach" {
   policy_arn = aws_iam_policy.policy.arn
 }
 
+resource "aws_iam_policy_attachment" "web-app-atach-cloudwatch" {
+  name       = "attach-cloudwatch-server-policy-ec2"
+  roles      = [aws_iam_role.ec2-role.name]
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
 
 
 resource "aws_iam_instance_profile" "iam_profile" {
   name = "iam_profile"
   role = aws_iam_role.ec2-role.name
 }
-
-#s3 bucket
-# resource "aws_s3_bucket" "s3_bucket" {
-#   lifecycle_rule {
-#     id      = "StorageTransitionRule"
-#     enabled = true
-#     transition {
-#       days          = 30
-#       storage_class = "STANDARD_IA"
-#     }
-#   }
-#   server_side_encryption_configuration {
-#     rule {
-#       apply_server_side_encryption_by_default {
-#         sse_algorithm = "AES256"
-#       }
-#     }
-#   }
-
-#   tags = {
-#     "Name" = "s3_bucket-${timestamp()}"
-#   }
-# }
-
-#iam role for ec2
-# resource "aws_iam_role" "ec2_role" {
-#   description        = "Policy for EC2 instance"
-#   name               = "tf-ec2-role"
-#   assume_role_policy = <<EOF
-# {
-#   "Version": "2012-10-17", 
-#   "Statement": [
-#     {
-#       "Action": "sts:AssumeRole", 
-#       "Effect": "Allow", 
-#       "Principal": {
-#         "Service": "ec2.amazonaws.com"
-#       }
-#     }
-#   ]
-# }
-# EOF
-#   tags = {
-#     "Name" = "ec2-iam-role"
-#   }
-# }
-
-# #policy document
-# data "aws_iam_policy_document" "policy_document" {
-#   version = "2012-10-17"
-#   statement {
-#     actions = [
-#       "s3:PutObject",
-#       "s3:GetObject",
-#       "s3:DeleteObject",
-#       "s3:ListBucket"
-#     ]
-#     resources = ["arn:aws:s3:::${aws_s3_bucket.s3_bucket.arn}",
-#     "arn:aws:s3:::${aws_s3_bucket.s3_bucket.arn}/*"]
-#   }
-#   depends_on = [aws_s3_bucket.s3_bucket]
-# }
-
-# #iam policy for role
-# resource "aws_iam_role_policy" "s3_policy" {
-#   name       = "tf-s3-policy"
-#   role       = aws_iam_role.ec2_role.id
-#   policy     = data.aws_iam_policy_document.policy_document.json
-#   depends_on = [aws_s3_bucket.s3_bucket]
-# }
 
 resource "aws_db_subnet_group" "db_subnet_group" {
   description = "Private Subnet group for RDS"
@@ -453,11 +476,10 @@ resource "aws_db_instance" "rds_instance" {
   engine                 = var.db_engine
   engine_version         = var.db_engine_version
   //multi_az               = false
-  name                = var.db_name
-  username            = var.db_username
-  password            = var.db_password
-  publicly_accessible = var.db_public_access
-  # publicly_accessible  = true
+  name                 = var.db_name
+  username             = var.db_username
+  password             = var.db_password
+  publicly_accessible  = var.db_public_access
   multi_az             = var.db_multiaz
   parameter_group_name = aws_db_parameter_group.rds_parameter_group.name
   skip_final_snapshot  = true
@@ -466,64 +488,22 @@ resource "aws_db_instance" "rds_instance" {
   }
 }
 
+# Look up the Route53 zone ID for the specified domain name
+data "aws_route53_zone" "hosted_zone" {
+  name         = var.domain_name
+  private_zone = false
+}
 
-# #iam instance profile for ec2
-# resource "aws_iam_instance_profile" "ec2_profile" {
-#   role = aws_iam_role.ec2_role.name
-# }
-resource "aws_route53_record" "example" {
-  zone_id = var.zone_id
-  name    = var.dns_name
+# Create Route53 record
+resource "aws_route53_record" "hosted_zone_record" {
+  zone_id = data.aws_route53_zone.hosted_zone.zone_id
+  name    = var.domain_name
   type    = "A"
-  ttl     = "300"
-  records = [aws_instance.webapp_instance.public_ip]
-}
-resource "aws_iam_policy_attachment" "web-app-atach-cloudwatch" {
-  name = "attach-cloudwatch-server-policy-ec2"
-  roles = [aws_iam_role.ec2-role.name]
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  alias{
+    name=aws_lb.lb.dns_name
+    zone_id=aws_lb.lb.zone_id
+    evaluate_target_health = true
+  }
 }
 
-# resource "aws_iam_role" "cloudwatch_agent_role" {
-#   name = "cloudwatch-agent-role"
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Principal = {
-#           Service = "ec2.amazonaws.com"
-#         }
-#         Action = "sts:AssumeRole"
-#       }
-#     ]
-#   })
-# }
-
-# resource "aws_iam_policy" "cloudwatch_agent_policy" {
-#   name        = "cloudwatch-agent-policy"
-#   policy      = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "cloudwatch:PutMetricData",
-#           "logs:CreateLogGroup",
-#           "logs:CreateLogStream",
-#           "logs:DescribeLogStreams",
-#           "logs:PutLogEvents",
-#           "logs:GetLogEvents",
-#           "logs:FilterLogEvents"
-#         ]
-#         Resource = "*"
-#       }
-#     ]
-#   })
-# }
-
-# resource "aws_iam_role_policy_attachment" "cloudwatch_agent_attachment" {
-#   policy_arn = aws_iam_policy.cloudwatch_agent_policy.arn
-#   role       = aws_iam_role.cloudwatch_agent_role.name
-# }
 
