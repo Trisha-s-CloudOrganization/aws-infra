@@ -506,3 +506,4 @@ resource "aws_route53_record" "hosted_zone_record" {
   }
 }
 
+
