@@ -206,59 +206,7 @@ sudo systemctl enable webservice.service
 sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 5080
   EOF
 }
-resource "aws_kms_key" "ebs_key" {
-  description             = "Example customer-managed key"
-  enable_key_rotation     = true
-  deletion_window_in_days = 30
-    policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid = "Allow administration of the key",
-        Effect   = "Allow"
-        Principal = {
-          AWS = "*"
-        }
-        Action = [
-          "kms:Create*",
-          "kms:Describe*",
-          "kms:Enable*",
-          "kms:List*",
-          "kms:Put*",
-          "kms:Update*",
-          "kms:Revoke*",
-          "kms:Disable*",
-          "kms:Get*",
-          "kms:Delete*",
-          "kms:TagResource",
-          "kms:UntagResource",
-          "kms:ScheduleKeyDeletion",
-          "kms:CancelKeyDeletion"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid = "Allow use of the key",
-        Effect   = "Allow"
-        Principal = {
-          AWS = "*"
-        }
-        Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-resource "aws_kms_alias" "ebs_key_alias" {
-  name          = "alias/ebs_key"
-  target_key_id = aws_kms_key.ebs_key.key_id
-}
+
 resource "aws_launch_template" "lt" {
   name                   = "asg_launch_config"
   image_id               = var.my_ami
@@ -272,12 +220,8 @@ resource "aws_launch_template" "lt" {
       volume_size           = 30
       volume_type           = "gp2"
       delete_on_termination = true
-      encrypted = true
-      kms_key_id = aws_kms_key.ebs_key.arn
     }
-}
-
-
+  }
   # network_interfaces {
   #   associate_public_ip_address = true
   #   security_groups             = [aws_security_group.app_sg.id]
@@ -303,6 +247,7 @@ resource "aws_autoscaling_group" "asg" {
     id      = aws_launch_template.lt.id
     version = "$Latest"
   }
+
   target_group_arns = [
     aws_lb_target_group.alb_tg.arn
   ]
@@ -393,10 +338,15 @@ resource "aws_lb_target_group" "alb_tg" {
     # unhealthy_threshold = 2
   }
 }
+data "aws_acm_certificate" "webapp_cert" {
+  domain   = var.domain_name
+  statuses = ["ISSUED"]
+}
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.lb.arn
-  port              = "80"
-  protocol          = "HTTP"
+  port              = "443"
+  protocol          = "HTTPS"
+  certificate_arn   = data.aws_acm_certificate.webapp_cert.arn
   default_action {
     target_group_arn = aws_lb_target_group.alb_tg.arn
     type             = "forward"
@@ -522,13 +472,6 @@ resource "aws_db_parameter_group" "rds_parameter_group" {
     value = "utf8"
   }
 }
-resource "aws_kms_key" "rds_key" {
-  description = "Customer-managed key for RDS encryption"
-}
-resource "aws_kms_alias" "rds_key_alias" {
-  name          = "alias/rds_key"
-  target_key_id = aws_kms_key.rds_key.key_id
-}
 resource "aws_db_instance" "rds_instance" {
   allocated_storage      = var.db_storage_size
   identifier             = "app-rds-db-1"
@@ -545,8 +488,6 @@ resource "aws_db_instance" "rds_instance" {
   multi_az             = var.db_multiaz
   parameter_group_name = aws_db_parameter_group.rds_parameter_group.name
   skip_final_snapshot  = true
-  storage_encrypted = true
-  kms_key_id = aws_kms_key.rds_key.arn
   tags = {
     "Name" = "rds-${timestamp()}"
   }
@@ -569,5 +510,4 @@ resource "aws_route53_record" "hosted_zone_record" {
     evaluate_target_health = true
   }
 }
-
 
