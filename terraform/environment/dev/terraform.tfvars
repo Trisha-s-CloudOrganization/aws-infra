@@ -16,3 +16,4 @@ db_password       = "password"
 db_public_access  = false
 db_multiaz        = false
 zone_id           = "Z04206273AIGJGY3GTKBW"
+aws_account_id    = "796278416148"

@@ -80,3 +80,7 @@ variable "domain_name" {
   description = "DNS Name for the application"
   type        = string
 }
+variable "aws_account_id" {
+  description = "account id"
+  type        = string
+}

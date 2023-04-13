@@ -35,5 +35,6 @@ module "web_app" {
   db_multiaz        = var.db_multiaz
   zone_id           = var.zone_id
   domain_name       = var.domain_name
+  aws_account_id    = var.aws_account_id
 }
 
